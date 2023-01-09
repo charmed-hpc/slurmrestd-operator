@@ -14,7 +14,7 @@ class TestCharm(unittest.TestCase):
 
     def test_update_status_fail(self):
         self.harness.charm.on.update_status.emit()
-        self.assertEqual(self.harness.charm.unit.status, BlockedStatus("Machine needs reboot"))
+        self.assertEqual(self.harness.charm.unit.status, BlockedStatus("Error installing slurmrestd"))
 
     @patch("slurm_ops_manager.SlurmManager.needs_reboot", new_callable=PropertyMock(return_value=False))
     @patch("interface_slurmrestd.SlurmrestdRequires.is_joined", new_callable=PropertyMock(return_value=True))
