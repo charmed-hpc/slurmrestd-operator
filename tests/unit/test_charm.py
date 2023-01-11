@@ -10,7 +10,6 @@ class TestCharm(unittest.TestCase):
         self.harness = Harness(SlurmrestdCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-        self.maxDiff = None
 
     @patch("ops.framework.EventBase.defer")
     def test_config_available_fail(self, defer):
@@ -36,8 +35,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._slurmrestd.on.config_unavailable.emit()
         self.assertFalse(self.harness.charm._stored.slurmrestd_restarted)
 
-    @patch("pathlib.Path.read_text")
-    @patch("ops.model.Unit.set_workload_version")
+    @patch("pathlib.Path.read_text", return_value="v1.0.0")
     @patch("ops.framework.EventBase.defer")
     def test_install_fail(self, defer, *_):
         self.harness.charm.on.install.emit()
@@ -50,8 +48,7 @@ class TestCharm(unittest.TestCase):
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_jwt_rsa", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_slurm_config", lambda _: True)
     @patch("slurm_ops_manager.SlurmManager.install")
-    @patch("pathlib.Path.read_text")
-    @patch("ops.model.Unit.set_workload_version")
+    @patch("pathlib.Path.read_text", return_value="v1.0.0")
     @patch("slurm_ops_manager.SlurmManager.start_munged", lambda _: True)
     @patch("ops.framework.EventBase.defer")
     def test_install_success(self, defer, *_):
@@ -127,14 +124,12 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.update_status.emit()
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus("slurmrestd available"))
 
-    @patch("pathlib.Path.read_text")
-    @patch("ops.model.Unit.set_workload_version")
+    @patch("pathlib.Path.read_text", return_value="v1.0.0")
     def test_upgrade_fail(self, *_):
         self.harness.charm.on.upgrade_charm.emit()
         self.assertEqual(self.harness.charm.unit.status, BlockedStatus("Error installing slurmrestd"))
 
-    @patch("pathlib.Path.read_text")
-    @patch("ops.model.Unit.set_workload_version")
+    @patch("pathlib.Path.read_text", return_value="v1.0.0")
     @patch("slurm_ops_manager.SlurmManager.needs_reboot", new_callable=PropertyMock(return_value=False))
     @patch("interface_slurmrestd.SlurmrestdRequires.is_joined", new_callable=PropertyMock(return_value=True))
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_munge_key", lambda _: True)
