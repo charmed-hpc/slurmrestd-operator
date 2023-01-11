@@ -5,6 +5,7 @@ from charm import SlurmrestdCharm
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.testing import Harness
 
+
 class TestCharm(unittest.TestCase):
     def setUp(self) -> None:
         self.harness = Harness(SlurmrestdCharm)
