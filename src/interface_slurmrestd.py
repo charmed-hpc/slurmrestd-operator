@@ -3,7 +3,6 @@
 import json
 import logging
 
-
 from ops.framework import (
     EventBase,
     EventSource,
@@ -11,7 +10,6 @@ from ops.framework import (
     ObjectEvents,
     StoredState,
 )
-
 
 logger = logging.getLogger()
 
@@ -62,21 +60,18 @@ class SlurmrestdRequires(Object):
         self._stored.set_default(
             munge_key=str(),
             jwt_rsa=str(),
-            slurm_config=dict(),
+            slurm_config={},
             restart_slurmrestd_uuid=str(),
         )
 
         self.framework.observe(
-            self._charm.on[relation_name].relation_joined,
-            self._on_relation_joined
+            self._charm.on[relation_name].relation_joined, self._on_relation_joined
         )
         self.framework.observe(
-            self._charm.on[relation_name].relation_changed,
-            self._on_relation_changed
+            self._charm.on[relation_name].relation_changed, self._on_relation_changed
         )
         self.framework.observe(
-            self._charm.on[relation_name].relation_broken,
-            self._on_relation_broken
+            self._charm.on[relation_name].relation_broken, self._on_relation_broken
         )
 
     def _on_relation_joined(self, event):
@@ -119,8 +114,8 @@ class SlurmrestdRequires(Object):
 
         logger.debug("## slurmrestd - relation changed")
 
-        munge_key = event_app_data.get('munge_key')
-        jwt_rsa = event_app_data.get('jwt_rsa')
+        munge_key = event_app_data.get("munge_key")
+        jwt_rsa = event_app_data.get("jwt_rsa")
         restart_slurmrestd_uuid = event_app_data.get("restart_slurmrestd_uuid")
         slurm_config = self._get_slurm_config_from_relation()
 
@@ -162,7 +157,7 @@ class SlurmrestdRequires(Object):
             if app:
                 app_data = self._relation.data.get(app)
                 if app_data:
-                    slurm_config = app_data.get('slurm_config')
+                    slurm_config = app_data.get("slurm_config")
                     if slurm_config:
                         return json.loads(slurm_config)
         return {}
