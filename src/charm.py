@@ -3,6 +3,8 @@
 import logging
 from pathlib import Path
 
+from charms.fluentbit.v0.fluentbit import FluentbitClient
+from interface_slurmrestd import SlurmrestdRequires
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
@@ -12,9 +14,6 @@ from ops.model import (
     WaitingStatus,
 )
 from slurm_ops_manager import SlurmManager
-from interface_slurmrestd import SlurmrestdRequires
-
-from charms.fluentbit.v0.fluentbit import FluentbitClient
 
 logger = logging.getLogger()
 
@@ -29,13 +28,11 @@ class SlurmrestdCharm(CharmBase):
         super().__init__(*args)
 
         self._stored.set_default(
-            slurm_installed=False,
-            slurmrestd_restarted=False,
-            cluster_name=str()
+            slurm_installed=False, slurmrestd_restarted=False, cluster_name=str()
         )
 
         self._slurm_manager = SlurmManager(self, "slurmrestd")
-        self._slurmrestd = SlurmrestdRequires(self, 'slurmrestd')
+        self._slurmrestd = SlurmrestdRequires(self, "slurmrestd")
         self._fluentbit = FluentbitClient(self, "fluentbit")
 
         event_handler_bindings = {
@@ -79,7 +76,7 @@ class SlurmrestdCharm(CharmBase):
 
     def _configure_fluentbit(self):
         logger.debug("## Configuring fluentbit")
-        cfg = list()
+        cfg = []
         cfg.extend(self._slurm_manager.fluentbit_config_nhc)
         cfg.extend(self._slurm_manager.fluentbit_config_slurm)
         self._fluentbit.configure(cfg)
@@ -150,9 +147,11 @@ class SlurmrestdCharm(CharmBase):
             self.unit.status = BlockedStatus("Need relations: slurmctld")
             return False
 
-        slurmctld_available = (self._slurmrestd.get_stored_munge_key()
-                               and self._slurmrestd.get_stored_jwt_rsa()
-                               and self._slurmrestd.get_stored_slurm_config())
+        slurmctld_available = (
+            self._slurmrestd.get_stored_munge_key()
+            and self._slurmrestd.get_stored_jwt_rsa()
+            and self._slurmrestd.get_stored_slurm_config()
+        )
         if not slurmctld_available:
             self.unit.status = WaitingStatus("Waiting on: slurmctld")
             return True

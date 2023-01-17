@@ -18,9 +18,18 @@ class TestCharm(unittest.TestCase):
         defer.assert_called()
 
     @patch("slurm_ops_manager.SlurmManager.render_slurm_configs")
-    @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_slurm_config", return_value={"cluster_name": "test"})
-    @patch("slurm_ops_manager.SlurmManager.needs_reboot", new_callable=PropertyMock(return_value=False))
-    @patch("interface_slurmrestd.SlurmrestdRequires.is_joined", new_callable=PropertyMock(return_value=True))
+    @patch(
+        "interface_slurmrestd.SlurmrestdRequires.get_stored_slurm_config",
+        return_value={"cluster_name": "test"},
+    )
+    @patch(
+        "slurm_ops_manager.SlurmManager.needs_reboot",
+        new_callable=PropertyMock(return_value=False),
+    )
+    @patch(
+        "interface_slurmrestd.SlurmrestdRequires.is_joined",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_munge_key", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_jwt_rsa", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_slurm_config", lambda _: True)
@@ -43,8 +52,14 @@ class TestCharm(unittest.TestCase):
         self.assertFalse(self.harness.charm._stored.slurm_installed)
         defer.assert_called()
 
-    @patch("slurm_ops_manager.SlurmManager.needs_reboot", new_callable=PropertyMock(return_value=False))
-    @patch("interface_slurmrestd.SlurmrestdRequires.is_joined", new_callable=PropertyMock(return_value=True))
+    @patch(
+        "slurm_ops_manager.SlurmManager.needs_reboot",
+        new_callable=PropertyMock(return_value=False),
+    )
+    @patch(
+        "interface_slurmrestd.SlurmrestdRequires.is_joined",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_munge_key", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_jwt_rsa", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_slurm_config", lambda _: True)
@@ -76,7 +91,7 @@ class TestCharm(unittest.TestCase):
     def test_munge_key_available_fail(self, defer):
         self.harness.charm._slurmrestd.on.munge_key_available.emit()
         defer.assert_called()
-    
+
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_munge_key")
     @patch("slurm_ops_manager.SlurmManager.configure_munge_key")
     @patch("slurm_ops_manager.SlurmManager.restart_munged")
@@ -93,15 +108,21 @@ class TestCharm(unittest.TestCase):
         defer.assert_called()
 
     @patch("slurm_ops_manager.SlurmManager.restart_slurm_component", lambda _: True)
-    @patch("slurm_ops_manager.SlurmManager.needs_reboot", new_callable=PropertyMock(return_value=False))
-    @patch("interface_slurmrestd.SlurmrestdRequires.is_joined", new_callable=PropertyMock(return_value=True))
+    @patch(
+        "slurm_ops_manager.SlurmManager.needs_reboot",
+        new_callable=PropertyMock(return_value=False),
+    )
+    @patch(
+        "interface_slurmrestd.SlurmrestdRequires.is_joined",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_munge_key", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_jwt_rsa", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_slurm_config", lambda _: True)
     @patch("ops.framework.EventBase.defer")
     def test_restart_slurmrestd_success(self, defer, *_):
         self.harness.charm._stored.slurm_installed = True
-        
+
         self.harness.charm._slurmrestd.on.restart_slurmrestd.emit()
         self.assertTrue(self.harness.charm._stored.slurmrestd_restarted)
         defer.assert_not_called()
@@ -112,10 +133,18 @@ class TestCharm(unittest.TestCase):
 
     def test_update_status_fail(self):
         self.harness.charm.on.update_status.emit()
-        self.assertEqual(self.harness.charm.unit.status, BlockedStatus("Error installing slurmrestd"))
+        self.assertEqual(
+            self.harness.charm.unit.status, BlockedStatus("Error installing slurmrestd")
+        )
 
-    @patch("slurm_ops_manager.SlurmManager.needs_reboot", new_callable=PropertyMock(return_value=False))
-    @patch("interface_slurmrestd.SlurmrestdRequires.is_joined", new_callable=PropertyMock(return_value=True))
+    @patch(
+        "slurm_ops_manager.SlurmManager.needs_reboot",
+        new_callable=PropertyMock(return_value=False),
+    )
+    @patch(
+        "interface_slurmrestd.SlurmrestdRequires.is_joined",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_munge_key", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_jwt_rsa", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_slurm_config", lambda _: True)
@@ -128,11 +157,19 @@ class TestCharm(unittest.TestCase):
     @patch("pathlib.Path.read_text", return_value="v1.0.0")
     def test_upgrade_fail(self, *_):
         self.harness.charm.on.upgrade_charm.emit()
-        self.assertEqual(self.harness.charm.unit.status, BlockedStatus("Error installing slurmrestd"))
+        self.assertEqual(
+            self.harness.charm.unit.status, BlockedStatus("Error installing slurmrestd")
+        )
 
     @patch("pathlib.Path.read_text", return_value="v1.0.0")
-    @patch("slurm_ops_manager.SlurmManager.needs_reboot", new_callable=PropertyMock(return_value=False))
-    @patch("interface_slurmrestd.SlurmrestdRequires.is_joined", new_callable=PropertyMock(return_value=True))
+    @patch(
+        "slurm_ops_manager.SlurmManager.needs_reboot",
+        new_callable=PropertyMock(return_value=False),
+    )
+    @patch(
+        "interface_slurmrestd.SlurmrestdRequires.is_joined",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_munge_key", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_jwt_rsa", lambda _: True)
     @patch("interface_slurmrestd.SlurmrestdRequires.get_stored_slurm_config", lambda _: True)
