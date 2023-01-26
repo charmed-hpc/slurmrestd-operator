@@ -93,12 +93,12 @@ class SlurmrestdCharm(CharmBase):
     def _on_config_unavailable(self, event):
         """Handle the config unavailable due to relation broken."""
         # when the config becomes unavailable, we have to set this flag to False,
-        # so the next time the config becoms avaiable, the daemon restarts
+        # so the next time the config becomes available, the daemon restarts
         self._stored.slurmrestd_restarted = False
         self._check_status()
 
     def _on_restart_slurmrestd(self, event):
-        """Resart the slurmrestd component."""
+        """Restart the slurmrestd component."""
         logger.debug("## _on_restart_slurmrestd")
 
         if not self._check_status():
