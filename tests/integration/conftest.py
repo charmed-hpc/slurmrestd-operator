@@ -17,10 +17,9 @@
 
 import pathlib
 
+from helpers import ETCD, NHC, VERSION
 from pytest import fixture
 from pytest_operator.plugin import OpsTest
-
-from helpers import ETCD, NHC, VERSION
 
 
 @fixture(scope="module")
