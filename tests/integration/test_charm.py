@@ -18,15 +18,15 @@
 import asyncio
 import logging
 import pathlib
+from typing import Any, Coroutine
+
 import pytest
 import tenacity
-
 from helpers import (
     get_slurmctld_res,
     get_slurmd_res,
 )
 from pytest_operator.plugin import OpsTest
-from typing import Any, Coroutine
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ async def test_build_and_deploy(
             series="bionic",
         ),
     )
-    
+
     # Attach ETCD resource to the slurmctld controller
     await ops_test.juju("attach-resource", SLURMCTLD, f"etcd={res_slurmctld['etcd']}")
 
@@ -127,7 +127,7 @@ async def test_munge_is_active(ops_test: OpsTest) -> None:
 
 # IMPORTANT: Currently there is a bug where slurmrestd can reach active status despite the
 # systemd service failing. Error is "unable to get address" and "Temporary failure in
-# name resolution". 
+# name resolution".
 @pytest.mark.xfail
 @tenacity.retry(
     wait=tenacity.wait.wait_exponential(multiplier=2, min=1, max=30),

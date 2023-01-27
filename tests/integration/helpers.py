@@ -19,7 +19,6 @@ import logging
 import pathlib
 import shlex
 import subprocess
-
 from typing import Dict
 from urllib import request
 
