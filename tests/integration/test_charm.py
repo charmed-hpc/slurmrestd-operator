@@ -22,10 +22,7 @@ from typing import Any, Coroutine
 
 import pytest
 import tenacity
-from helpers import (
-    get_slurmctld_res,
-    get_slurmd_res,
-)
+from helpers import get_slurmctld_res, get_slurmd_res
 from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
@@ -86,7 +83,6 @@ async def test_build_and_deploy(
             series="bionic",
         ),
     )
-
     # Attach ETCD resource to the slurmctld controller
     await ops_test.juju("attach-resource", SLURMCTLD, f"etcd={res_slurmctld['etcd']}")
 
