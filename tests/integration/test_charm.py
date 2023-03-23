@@ -32,6 +32,8 @@ SLURMCTLD = "slurmctld"
 SLURMD = "slurmd"
 SLURMDBD = "slurmdbd"
 SLURMRESTD = "slurmrestd"
+DATABASE = "mysql"
+ROUTER = "mysql-router"
 
 
 @pytest.mark.abort_on_fail
@@ -76,31 +78,29 @@ async def test_build_and_deploy(
             series=series,
         ),
         ops_test.model.deploy(
-            "percona-cluster",
-            application_name="mysql",
+            ROUTER,
+            application_name=f"{SLURMDBD}-{ROUTER}",
+            channel="dpe/edge",
+            num_units=1,
+            series=series,
+        ),
+        ops_test.model.deploy(
+            DATABASE,
+            application_name=DATABASE,
             channel="edge",
             num_units=1,
-            series="bionic",
+            series="jammy",
         ),
     )
-    # Attach ETCD resource to the slurmctld controller
+    # Attach resources to charms.
     await ops_test.juju("attach-resource", SLURMCTLD, f"etcd={res_slurmctld['etcd']}")
-
-    # Add slurmdbd relation to slurmctld
-    await ops_test.model.relate(SLURMCTLD, SLURMDBD)
-
-    # Add mysql relation to slurmdbd
-    await ops_test.model.relate(SLURMDBD, "mysql")
-
-    # Add slurmctld relation to slurmrestd
-    await ops_test.model.relate(SLURMRESTD, SLURMCTLD)
-
-    # Attach NHC resource to the slurmd controller
     await ops_test.juju("attach-resource", SLURMD, f"nhc={res_slurmd['nhc']}")
-
-    # Add slurmctld relation to slurmd
-    await ops_test.model.add_relation(SLURMD, SLURMCTLD)
-
+    # Set relations for charmed applications.
+    await ops_test.model.relate(f"{SLURMCTLD}:{SLURMDBD}", f"{SLURMDBD}:{SLURMDBD}")
+    await ops_test.model.relate(f"{SLURMDBD}-{ROUTER}:backend-database", f"{DATABASE}:database")
+    await ops_test.model.relate(f"{SLURMDBD}:database", f"{SLURMDBD}-{ROUTER}:database")
+    await ops_test.model.relate(f"{SLURMRESTD}:slurmrestd", f"{SLURMCTLD}:slurmrestd")
+    await ops_test.model.add_relation(f"{SLURMD}:{SLURMD}", f"{SLURMCTLD}:{SLURMD}")
     # Reduce the update status frequency to accelerate the triggering of deferred events.
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[SLURMRESTD], status="active", timeout=1000)
