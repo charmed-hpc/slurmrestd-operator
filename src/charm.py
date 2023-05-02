@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+# Copyright 2020 Omnivector Solutions, LLC.
+# See LICENSE file for licensing details.
+
 """SlurmrestdCharm."""
+
 import logging
 from pathlib import Path
 
@@ -8,11 +12,7 @@ from interface_slurmrestd import SlurmrestdRequires
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
-from ops.model import (
-    ActiveStatus,
-    BlockedStatus,
-    WaitingStatus,
-)
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from slurm_ops_manager import SlurmManager
 
 logger = logging.getLogger()
@@ -134,10 +134,6 @@ class SlurmrestdCharm(CharmBase):
         self._slurm_manager.configure_jwt_rsa(jwt_rsa)
 
     def _check_status(self) -> bool:
-        if self._slurm_manager.needs_reboot:
-            self.unit.status = BlockedStatus("Machine needs reboot")
-            return False
-
         if not self._stored.slurm_installed:
             self.unit.status = BlockedStatus("Error installing slurmrestd")
             return False

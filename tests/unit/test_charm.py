@@ -40,10 +40,6 @@ class TestCharm(unittest.TestCase):
         return_value={"cluster_name": "test"},
     )
     @patch(
-        "slurm_ops_manager.SlurmManager.needs_reboot",
-        new_callable=PropertyMock(return_value=False),
-    )
-    @patch(
         "interface_slurmrestd.SlurmrestdRequires.is_joined",
         new_callable=PropertyMock(return_value=True),
     )
@@ -69,10 +65,6 @@ class TestCharm(unittest.TestCase):
         self.assertFalse(self.harness.charm._stored.slurm_installed)
         defer.assert_called()
 
-    @patch(
-        "slurm_ops_manager.SlurmManager.needs_reboot",
-        new_callable=PropertyMock(return_value=False),
-    )
     @patch(
         "interface_slurmrestd.SlurmrestdRequires.is_joined",
         new_callable=PropertyMock(return_value=True),
@@ -126,10 +118,6 @@ class TestCharm(unittest.TestCase):
 
     @patch("slurm_ops_manager.SlurmManager.restart_slurm_component", lambda _: True)
     @patch(
-        "slurm_ops_manager.SlurmManager.needs_reboot",
-        new_callable=PropertyMock(return_value=False),
-    )
-    @patch(
         "interface_slurmrestd.SlurmrestdRequires.is_joined",
         new_callable=PropertyMock(return_value=True),
     )
@@ -155,10 +143,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch(
-        "slurm_ops_manager.SlurmManager.needs_reboot",
-        new_callable=PropertyMock(return_value=False),
-    )
-    @patch(
         "interface_slurmrestd.SlurmrestdRequires.is_joined",
         new_callable=PropertyMock(return_value=True),
     )
@@ -179,10 +163,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("pathlib.Path.read_text", return_value="v1.0.0")
-    @patch(
-        "slurm_ops_manager.SlurmManager.needs_reboot",
-        new_callable=PropertyMock(return_value=False),
-    )
     @patch(
         "interface_slurmrestd.SlurmrestdRequires.is_joined",
         new_callable=PropertyMock(return_value=True),
