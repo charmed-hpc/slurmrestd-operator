@@ -19,6 +19,8 @@ via HTTP requests over a network.
 
 ## Usage
 
+This operator should be used with Juju 3.x or greater.
+
 #### Deploy a minimal Charmed SLURM cluster with slurmrestd
 
 ```shell
