@@ -16,8 +16,6 @@
 
 import logging
 import pathlib
-import shlex
-import subprocess
 from typing import Dict
 from urllib import request
 
@@ -27,17 +25,10 @@ ETCD = "etcd-v3.5.0-linux-amd64.tar.gz"
 ETCD_URL = f"https://github.com/etcd-io/etcd/releases/download/v3.5.0/{ETCD}"
 NHC = "lbnl-nhc-1.4.3.tar.gz"
 NHC_URL = f"https://github.com/mej/nhc/releases/download/1.4.3/{NHC}"
-VERSION = "version"
-VERSION_NUM = subprocess.run(
-    shlex.split("git describe --always"), stdout=subprocess.PIPE, text=True
-).stdout.strip("\n")
 
 
 def get_slurmctld_res() -> Dict[str, pathlib.Path]:
     """Get slurmctld resources needed for charm deployment."""
-    if not (version := pathlib.Path(VERSION)).exists():
-        logger.info(f"Setting resource {VERSION} to value {VERSION_NUM}")
-        version.write_text(VERSION_NUM)
     if not (etcd := pathlib.Path(ETCD)).exists():
         logger.info(f"Getting resource {ETCD} from {ETCD_URL}")
         request.urlretrieve(ETCD_URL, etcd)
