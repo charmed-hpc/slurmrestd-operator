@@ -30,11 +30,11 @@ $ juju deploy slurmd --channel edge
 $ juju deploy slurmdbd --channel edge
 $ juju deploy mysql --channel 8.0/edge
 $ juju deploy mysql-router slurmdbd-mysql-router --channel dpe/edge
-$ juju integrate slurmctld:slurmrestd slurmrestd:slurmrestd
-$ juju integrate slurmctld:slurmd slurmd:slurmd
+$ juju integrate slurmctld:slurmd slurmd:slurmctld
+$ juju integrate slurmctld:slurmdbd slurmdbd:slurmctld
+$ juju integrate slurmctld:slurmrestd slurmrestd:slurmctld
 $ juju integrate slurmdbd-mysql-router:backend-database mysql:database
 $ juju integrate slurmdbd:database slurmdbd-mysql-router:database
-$ juju integrate slurmctld:slurmdbd slurmdbd:slurmdbd
 ```
 
 ## Project & Community
