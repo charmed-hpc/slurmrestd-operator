@@ -72,7 +72,7 @@ class Slurmctld(Object):
         return True if self.framework.model.relations.get(self._relation_name) else False
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
-        """Get the munge key and slurm_conf from slurmctld on relation joined."""
+        """Get the munge key and slurm_conf from slurmctld on relation changed."""
         if app := event.app:
             if event_app_data := event.relation.data.get(app):
 
