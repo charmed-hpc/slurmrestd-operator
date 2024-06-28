@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
-# Copyright 2020 Omnivector Solutions, LLC.
+# Copyright 2020-2024 Omnivector, LLC.
 # See LICENSE file for licensing details.
 
 """SlurmrestdCharm."""
 
 import logging
-from pathlib import Path
 
-from charms.fluentbit.v0.fluentbit import FluentbitClient
-from interface_slurmrestd import SlurmrestdRequires
-from ops.charm import CharmBase
-from ops.framework import StoredState
-from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from slurm_ops_manager import SlurmManager
+from interface_slurmctld import Slurmctld, SlurmctldAvailableEvent, SlurmctldUnavailableEvent
+from ops import (
+    ActiveStatus,
+    BlockedStatus,
+    CharmBase,
+    InstallEvent,
+    StoredState,
+    UpdateStatusEvent,
+    WaitingStatus,
+    main,
+)
+from slurmrestd_ops import SlurmrestdManager
 
 logger = logging.getLogger()
 
@@ -27,164 +31,70 @@ class SlurmrestdCharm(CharmBase):
         """Initialize charm and configure states and events to observe."""
         super().__init__(*args)
 
-        self._stored.set_default(
-            slurm_installed=False, slurmrestd_restarted=False, cluster_name=str()
-        )
+        self._stored.set_default(slurm_installed=False)
 
-        self._slurm_manager = SlurmManager(self, "slurmrestd")
-        self._slurmrestd = SlurmrestdRequires(self, "slurmrestd")
-        self._fluentbit = FluentbitClient(self, "fluentbit")
+        self._slurmctld = Slurmctld(self, "slurmctld")
+        self._slurmrestd_manager = SlurmrestdManager()
 
         event_handler_bindings = {
             self.on.install: self._on_install,
-            self.on.upgrade_charm: self._on_upgrade,
             self.on.update_status: self._on_update_status,
-            self._slurmrestd.on.config_available: self._on_check_status_and_write_config,
-            self._slurmrestd.on.config_unavailable: self._on_config_unavailable,
-            self._slurmrestd.on.munge_key_available: self._on_configure_munge_key,
-            self._slurmrestd.on.jwt_rsa_available: self._on_configure_jwt_rsa,
-            self._slurmrestd.on.restart_slurmrestd: self._on_restart_slurmrestd,
-            # fluentbit
-            self.on["fluentbit"].relation_created: self._on_fluentbit_relation_created,
+            self._slurmctld.on.slurmctld_available: self._on_slurmctld_available,
+            self._slurmctld.on.slurmctld_unavailable: self._on_slurmctld_unavailable,
         }
         for event, handler in event_handler_bindings.items():
             self.framework.observe(event, handler)
 
-    def _on_install(self, event):
+    def _on_install(self, event: InstallEvent) -> None:
         """Perform installation operations for slurmrestd."""
-        self.unit.set_workload_version(Path("version").read_text().strip())
-
         self.unit.status = WaitingStatus("Installing slurmrestd")
 
-        custom_repo = self.config.get("custom-slurm-repo")
-        successful_installation = self._slurm_manager.install(custom_repo)
-
-        if successful_installation:
-            self.unit.status = ActiveStatus("slurmrestd installed")
+        if self._slurmrestd_manager.install():
+            self.unit.set_workload_version(self._slurmrestd_manager.version())
             self._stored.slurm_installed = True
-
-            self._slurm_manager.start_munged()
         else:
-            self.unit.status = BlockedStatus("Error installing slurmrestd")
             event.defer()
 
         self._check_status()
 
-    def _on_fluentbit_relation_created(self, event):
-        """Set up Fluentbit log forwarding."""
-        self._configure_fluentbit()
-
-    def _configure_fluentbit(self):
-        logger.debug("## Configuring fluentbit")
-        cfg = []
-        cfg.extend(self._slurm_manager.fluentbit_config_nhc)
-        cfg.extend(self._slurm_manager.fluentbit_config_slurm)
-        self._fluentbit.configure(cfg)
-
-    def _on_upgrade(self, event):
-        """Perform upgrade operations."""
-        self.unit.set_workload_version(Path("version").read_text().strip())
-        self._check_status()
-
-    def _on_update_status(self, event):
+    def _on_update_status(self, event: UpdateStatusEvent) -> None:
         """Handle update status."""
         self._check_status()
 
-    def _on_config_unavailable(self, event):
-        """Handle the config unavailable due to relation broken."""
-        # when the config becomes unavailable, we have to set this flag to False,
-        # so the next time the config becomes available, the daemon restarts
-        self._stored.slurmrestd_restarted = False
+    def _on_slurmctld_available(self, event: SlurmctldAvailableEvent) -> None:
+        """Render config and restart the service when we have what we want from slurmctld."""
+        if self._stored.slurm_installed is not True:
+            event.defer()
+            return
+
+        if (event.munge_key is not None) and (event.slurm_conf is not None):
+            self._slurmrestd_manager.stop_slurmrestd()
+            self._slurmrestd_manager.stop_munge()
+            self._slurmrestd_manager.write_munge_key(event.munge_key)
+            self._slurmrestd_manager.write_slurm_conf(event.slurm_conf)
+            self._slurmrestd_manager.start_munge()
+            self._slurmrestd_manager.start_slurmrestd()
         self._check_status()
 
-    def _on_restart_slurmrestd(self, event):
-        """Restart the slurmrestd component."""
-        logger.debug("## _on_restart_slurmrestd")
-
-        if not self._check_status():
-            event.defer()
-            return
-
-        self._slurm_manager.restart_slurm_component()
-        self._stored.slurmrestd_restarted = True
-
-    def _on_configure_munge_key(self, event):
-        """Configure the munge key.
-
-        1) Get the munge key from the stored state of the slurmrestd relation
-        2) Write the munge key to the munge key path and chmod
-        3) Restart munged
-        """
-        if not self._stored.slurm_installed:
-            event.defer()
-            return
-
-        logger.debug("## configuring new munge key")
-        munge_key = self._slurmrestd.get_stored_munge_key()
-        self._slurm_manager.configure_munge_key(munge_key)
-        self._slurm_manager.restart_munged()
-
-    def _on_configure_jwt_rsa(self, event):
-        if not self._stored.slurm_installed:
-            event.defer()
-            return
-
-        logger.debug("## configuring new jwt rsa")
-        jwt_rsa = self._slurmrestd.get_stored_jwt_rsa()
-        self._slurm_manager.configure_jwt_rsa(jwt_rsa)
+    def _on_slurmctld_unavailable(self, event: SlurmctldUnavailableEvent) -> None:
+        """Stop the slurmrestd daemon if slurmctld is unavailable."""
+        self._slurmrestd_manager.stop_slurmrestd()
+        self._slurmrestd_manager.stop_munge()
+        self._check_status()
 
     def _check_status(self) -> bool:
-        if not self._stored.slurm_installed:
+        """Check the status of our integrated applications."""
+        if self._stored.slurm_installed is not True:
             self.unit.status = BlockedStatus("Error installing slurmrestd")
             return False
 
-        # Check and see if we have what we need for operation.
-        if not self._slurmrestd.is_joined:
+        if not self._slurmctld.is_joined:
             self.unit.status = BlockedStatus("Need relations: slurmctld")
             return False
 
-        slurmctld_available = (
-            self._slurmrestd.get_stored_munge_key()
-            and self._slurmrestd.get_stored_jwt_rsa()
-            and self._slurmrestd.get_stored_slurm_config()
-        )
-        if not slurmctld_available:
-            self.unit.status = WaitingStatus("Waiting on: slurmctld")
-            return True
-
-        self.unit.status = ActiveStatus("slurmrestd available")
-
+        self.unit.status = ActiveStatus()
         return True
-
-    def _on_check_status_and_write_config(self, event):
-        if not self._check_status():
-            event.defer()
-            return
-
-        slurm_config = self._slurmrestd.get_stored_slurm_config()
-        if slurm_config:
-            self._slurm_manager.render_slurm_configs(slurm_config)
-            self.cluster_name = slurm_config.get("cluster_name")
-        else:
-            logger.error(f"## weird slurmconfig: {slurm_config}")
-
-        # Only restart slurmrestd the first time the node is brought up.
-        if not self._stored.slurmrestd_restarted:
-            self._on_restart_slurmrestd(event)
-
-        if self._fluentbit._relation is not None:
-            self._configure_fluentbit()
-
-    @property
-    def cluster_name(self) -> str:
-        """Return the cluster-name."""
-        return self._stored.cluster_name
-
-    @cluster_name.setter
-    def cluster_name(self, name: str):
-        """Set the cluster-name."""
-        self._stored.cluster_name = name
 
 
 if __name__ == "__main__":
-    main(SlurmrestdCharm)
+    main.main(SlurmrestdCharm)

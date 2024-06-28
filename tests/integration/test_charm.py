@@ -20,7 +20,6 @@ import logging
 
 import pytest
 import tenacity
-from helpers import get_slurmd_res
 from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
@@ -51,7 +50,7 @@ async def test_build_and_deploy(
     )
     # Pack charms and download NHC resource for slurmd operator.
     slurmrestd, slurmctld, slurmd_res, slurmd, slurmdbd = await asyncio.gather(
-        slurmrestd_charm, slurmctld_charm, get_slurmd_res(), slurmd_charm, slurmdbd_charm
+        slurmrestd_charm, slurmctld_charm, slurmd_charm, slurmdbd_charm
     )
     # Deploy the test Charmed SLURM cloud.
     await asyncio.gather(
@@ -73,7 +72,6 @@ async def test_build_and_deploy(
             application_name=SLURMD,
             channel="edge" if isinstance(slurmd, str) else None,
             num_units=1,
-            resources=slurmd_res,
             base=charm_base,
         ),
         ops_test.model.deploy(
@@ -98,14 +96,12 @@ async def test_build_and_deploy(
             base="ubuntu@22.04",
         ),
     )
-    # Attach resources to charms.
-    await ops_test.juju("attach-resource", SLURMD, f"nhc={slurmd_res['nhc']}")
     # Set relations for charmed applications.
-    await ops_test.model.integrate(f"{SLURMCTLD}:{SLURMDBD}", f"{SLURMDBD}:{SLURMDBD}")
+    await ops_test.model.integrate(f"{SLURMCTLD}:{SLURMDBD}", f"{SLURMDBD}:{SLURMCTLD}")
     await ops_test.model.integrate(f"{SLURMDBD}-{ROUTER}:backend-database", f"{DATABASE}:database")
     await ops_test.model.integrate(f"{SLURMDBD}:database", f"{SLURMDBD}-{ROUTER}:database")
-    await ops_test.model.integrate(f"{SLURMRESTD}:slurmrestd", f"{SLURMCTLD}:slurmrestd")
-    await ops_test.model.integrate(f"{SLURMD}:{SLURMD}", f"{SLURMCTLD}:{SLURMD}")
+    await ops_test.model.integrate(f"{SLURMRESTD}:{SLURMCTLD}", f"{SLURMCTLD}:{SLURMRESTD}")
+    await ops_test.model.integrate(f"{SLURMD}:{SLURMCTLD}", f"{SLURMCTLD}:{SLURMD}")
     # Reduce the update status frequency to accelerate the triggering of deferred events.
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[SLURMRESTD], status="active", timeout=1000)
