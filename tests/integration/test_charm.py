@@ -25,7 +25,6 @@ from pytest_operator.plugin import OpsTest
 logger = logging.getLogger(__name__)
 
 SLURMCTLD = "slurmctld"
-SLURMD = "slurmd"
 SLURMDBD = "slurmdbd"
 SLURMRESTD = "slurmrestd"
 DATABASE = "mysql"
@@ -41,16 +40,13 @@ async def test_build_and_deploy(
     charm_base: str,
     slurmrestd_charm,
     slurmctld_charm,
-    slurmd_charm,
     slurmdbd_charm,
 ) -> None:
     """Test that the slurmrestd charm can stabilize against slurmctld, slurmd, and slurmdbd."""
-    logger.info(
-        f"Deploying {SLURMRESTD} against {SLURMCTLD}, {SLURMD}, {SLURMDBD}, and {DATABASE}"
-    )
+    logger.info(f"Deploying {SLURMRESTD} against {SLURMCTLD}, {SLURMDBD}, and {DATABASE}")
     # Pack charms and download NHC resource for slurmd operator.
-    slurmrestd, slurmctld, slurmd_res, slurmd, slurmdbd = await asyncio.gather(
-        slurmrestd_charm, slurmctld_charm, slurmd_charm, slurmdbd_charm
+    slurmrestd, slurmctld, slurmdbd = await asyncio.gather(
+        slurmrestd_charm, slurmctld_charm, slurmdbd_charm
     )
     # Deploy the test Charmed SLURM cloud.
     await asyncio.gather(
@@ -64,13 +60,6 @@ async def test_build_and_deploy(
             str(slurmctld),
             application_name=SLURMCTLD,
             channel="edge" if isinstance(slurmctld, str) else None,
-            num_units=1,
-            base=charm_base,
-        ),
-        ops_test.model.deploy(
-            str(slurmd),
-            application_name=SLURMD,
-            channel="edge" if isinstance(slurmd, str) else None,
             num_units=1,
             base=charm_base,
         ),
@@ -101,7 +90,6 @@ async def test_build_and_deploy(
     await ops_test.model.integrate(f"{SLURMDBD}-{ROUTER}:backend-database", f"{DATABASE}:database")
     await ops_test.model.integrate(f"{SLURMDBD}:database", f"{SLURMDBD}-{ROUTER}:database")
     await ops_test.model.integrate(f"{SLURMRESTD}:{SLURMCTLD}", f"{SLURMCTLD}:{SLURMRESTD}")
-    await ops_test.model.integrate(f"{SLURMD}:{SLURMCTLD}", f"{SLURMCTLD}:{SLURMD}")
     # Reduce the update status frequency to accelerate the triggering of deferred events.
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[SLURMRESTD], status="active", timeout=1000)
