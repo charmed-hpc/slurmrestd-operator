@@ -21,12 +21,10 @@ from pathlib import Path
 from typing import Union
 
 import pytest
-from helpers import NHC
 from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 SLURMCTLD_DIR = Path(os.getenv("SLURMCTLD_DIR", "../slurmctld-operator"))
-SLURMD_DIR = Path(os.getenv("SLURMD_DIR", "../slurmd-operator"))
 SLURMDBD_DIR = Path(os.getenv("SLURMDBD_DIR", "../slurmdbd-operator"))
 
 
@@ -78,26 +76,6 @@ async def slurmctld_charm(request, ops_test: OpsTest) -> Union[str, Path]:
 
 
 @pytest.fixture(scope="module")
-async def slurmd_charm(request, ops_test: OpsTest) -> Union[str, Path]:
-    """Pack slurmd charm to use for integration tests when --use-local is specified.
-
-    Returns:
-        `str` "slurmd" if --use-local not specified or if SLURMD_DIR does not exist.
-    """
-    if request.config.option.use_local:
-        logger.info("Using local slurmd operator rather than pulling from Charmhub")
-        if SLURMD_DIR.exists():
-            return await ops_test.build_charm(SLURMD_DIR)
-        else:
-            logger.warning(
-                f"{SLURMD_DIR} not found. "
-                f"Defaulting to latest/edge slurmd operator from Charmhub"
-            )
-
-    return "slurmd"
-
-
-@pytest.fixture(scope="module")
 async def slurmdbd_charm(request, ops_test: OpsTest) -> Union[str, Path]:
     """Pack slurmdbd charm to use for integration tests when --use-local is specified.
 
@@ -115,8 +93,3 @@ async def slurmdbd_charm(request, ops_test: OpsTest) -> Union[str, Path]:
             )
 
     return "slurmdbd"
-
-
-def pytest_sessionfinish(session, exitstatus) -> None:
-    """Clean up repository after test session has completed."""
-    Path(NHC).unlink(missing_ok=True)
