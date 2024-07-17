@@ -24,12 +24,11 @@ from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
+SLURMRESTD = "slurmrestd"
 SLURMCTLD = "slurmctld"
 SLURMDBD = "slurmdbd"
-SLURMRESTD = "slurmrestd"
 DATABASE = "mysql"
 ROUTER = "mysql-router"
-UNIT_NAME = f"{SLURMRESTD}/0"
 
 
 @pytest.mark.abort_on_fail
@@ -93,7 +92,7 @@ async def test_build_and_deploy(
     # Reduce the update status frequency to accelerate the triggering of deferred events.
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[SLURMRESTD], status="active", timeout=1000)
-        assert ops_test.model.units.get(UNIT_NAME).workload_status == "active"
+        assert ops_test.model.applications[SLURMRESTD].units[0].workload_status == "active"
 
 
 @pytest.mark.abort_on_fail
@@ -106,7 +105,7 @@ async def test_build_and_deploy(
 async def test_munge_is_active(ops_test: OpsTest) -> None:
     """Test that munge is active."""
     logger.info("Checking that munge is active inside Juju unit")
-    slurmrestd_unit = ops_test.model.units.get(UNIT_NAME)
+    slurmrestd_unit = ops_test.model.applications[SLURMRESTD].units[0]
     res = (await slurmrestd_unit.ssh("systemctl is-active munge")).strip("\n")
     assert res == "active"
 
@@ -121,6 +120,6 @@ async def test_munge_is_active(ops_test: OpsTest) -> None:
 async def test_slurmrestd_is_active(ops_test: OpsTest) -> None:
     """Test that slurmrestd is active."""
     logger.info("Checking that slurmrestd is active inside Juju unit")
-    slurmrestd_unit = ops_test.model.units.get(UNIT_NAME)
+    slurmrestd_unit = ops_test.model.applications[SLURMRESTD].units[0]
     cmd_res = (await slurmrestd_unit.ssh("systemctl is-active slurmrestd")).strip("\n")
     assert cmd_res == "active"
