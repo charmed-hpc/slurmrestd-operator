@@ -111,6 +111,7 @@ class SlurmrestdManager:
     def __init__(self):
         self._munge_package = CharmedHPCPackageLifecycleManager("munge")
         self._slurmrestd_package = CharmedHPCPackageLifecycleManager("slurmrestd")
+        self._slurm_plugins_package = CharmedHPCPackageLifecycleManager("slurm-wlm-basic-plugins")
 
     def install(self) -> bool:
         """Install slurmrestd and munge to the system."""
@@ -124,10 +125,13 @@ class SlurmrestdManager:
             return False
         systemd.service_stop("munge")
 
+        if self._slurm_plugins_package.install() is not True:
+            return False
+
         self._create_slurmrestd_user_group()
 
         slurm_conf_dir = Path("/etc/slurm")
-        slurm_conf_dir.mkdir()
+        slurm_conf_dir.mkdir(exist_ok=True)
 
         os.chown(f"{slurm_conf_dir}", SLURMRESTD_USER_UID, SLURMRESTD_GROUP_GID)
 
