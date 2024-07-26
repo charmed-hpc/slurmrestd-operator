@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: slurmdbd charm tests (experimental)
+name: slurmrestd charm tests (experimental)
 on:
   pull_request:
     branches:
